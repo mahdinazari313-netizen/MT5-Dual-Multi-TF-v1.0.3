@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/nav_active_signals" android:icon="@drawable/ic_active_signals" android:title="@string/nav_active_signals" />
+    <item android:id="@+id/nav_dual_triggers" android:icon="@drawable/ic_dual_triggers" android:title="@string/nav_dual_triggers" />
+    <item android:id="@+id/nav_trigger_history" android:icon="@drawable/ic_trigger_history" android:title="@string/nav_trigger_history" />
+</menu>

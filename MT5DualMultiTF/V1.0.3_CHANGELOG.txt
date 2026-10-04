@@ -1,0 +1,113 @@
+MT5 Dual Multi-TF v1.0.3
+==========================
+
+Core Dual engine untouched: SignalParser, SignalValidator,
+SignalStateManager, SymbolTFKey, DualReference, DualTrigger,
+WeekdayTimeUtil, DualApplication.java, and the Reference-advance /
+window / price-difference logic inside DualEngineManager are all
+unchanged. Four additive changes only.
+
+1) Version Indicator (same pattern as Dashboard v16.2)
+   - app/build.gradle: versionCode 1 -> 103, versionName "1.0" -> "1.0.3".
+   - res/values/strings.xml: added "toolbar_version_subtitle" = "نسخه %1$s".
+   - res/layout/activity_main.xml: added app:subtitleTextColor="@android:color/white"
+     on the Toolbar.
+   - ui/MainActivity.java: added applyVersionSubtitle(Toolbar), called
+     once in onCreate() right after setSupportActionBar(toolbar). Reads
+     getPackageManager().getPackageInfo(...).versionName — the same API
+     already used by showAboutDialog(). Not BuildConfig.
+
+2) B-25 — Trigger creation time in the Dual Triggers list
+   - ui/DualTriggerAdapter.java: trigger_row_main now takes a third
+     placeholder for createdAt, formatted with
+     SimpleDateFormat("HH:mm", Locale.getDefault()).
+   - res/values/strings.xml: trigger_row_main updated to
+     "%1$s  %2$s   %3$s" (TF, Direction, time).
+
+3) B-26 — Trigger History (third tab)
+   New files:
+   - dual/DualTriggerHistoryEntry.java — immutable snapshot: triggerId,
+     symbol, timeframe, direction, full referenceSignal and
+     incomingSignal (Signal objects, not a text summary), createdAt.
+   - ui/DualTriggerHistoryAdapter.java — flat list (no symbol grouping),
+     newest first, reuses item_dual_trigger.xml with both Silent and
+     Dismiss buttons hidden.
+   - ui/DualTriggerHistoryFragment.java — third tab; no DualAlarmListener
+     registered (history doesn't change on Repeat/Expire/Dismiss), just
+     a 30s tick so entries aged past retention disappear from view even
+     with no new signal activity.
+   - res/layout/fragment_dual_trigger_history.xml.
+   - res/drawable/ic_trigger_history.xml — clock icon, styled like
+     Dual's existing plain-fill icons (no android:tint, since Dual's
+     BottomNavigationView has no app:itemIconTint, unlike Dashboard).
+
+   Changed files:
+   - dual/DualEngineManager.java: added Deque<DualTriggerHistoryEntry>
+     triggerHistory (ConcurrentLinkedDeque), addToHistory() called once
+     per genuinely new trigger (right after fireNewTrigger — MT5 repeats
+     with the same price never reach that line, so no duplicate
+     entries), getTriggerHistory() (snapshot), cleanOldHistory(now)
+     (age-only removal, called at the start of runPeriodicSafetyCheck;
+     never touches activeTriggers).
+   - settings/SettingsProvider.java: added
+     getTriggerHistoryRetentionHours()/setTriggerHistoryRetentionHours(int),
+     default 24h, backed by SharedPreferences (same mechanism as the
+     other three settings already there).
+   - ui/MainActivity.java: third bottom-nav tab wired; refreshVisibleFragment()
+     now also handles DualTriggerHistoryFragment.
+   - res/menu/bottom_nav_menu.xml: third item (nav_trigger_history).
+   - res/values/strings.xml: nav_trigger_history, empty_trigger_history,
+     dual_trigger_history_row_main.
+
+   Note: no retention-editing menu/dialog was added in this version —
+   it wasn't requested in the v1.0.3 spec (unlike Dashboard's B-26,
+   which explicitly asked for one). getTriggerHistoryRetentionHours()
+   simply defaults to 24 for now; add a settings UI later if needed.
+
+4) Dismiss (without triggerId — explicit, mandatory decision)
+   - dual/DualAlarmListener.java: added onTriggerDismissed(DualTrigger).
+   - dual/DualEngineManager.java: added
+     dismiss(String symbol, Timeframe tf, Direction direction) —
+     removes the current active trigger for that key (if any) and fires
+     onTriggerDismissed. DualReference (the running "last signal" state
+     used for Dual matching) is NOT touched — dismiss only removes from
+     activeTriggers. The matching loop for that key keeps running
+     exactly as before: the next signal with a different price is
+     compared against the same Reference as if nothing happened, and
+     can produce a brand-new Trigger.
+   - alarm/AlarmNotifier.java: onTriggerDismissed(trigger) implemented
+     by reusing the existing cancel() helper (same notification-cancel
+     path as onTriggerExpired).
+   - ui/DualTriggerAdapter.java: added DismissListener interface and a
+     second constructor parameter; Dismiss button wired per row.
+   - ui/DualTriggersFragment.java: adapter construction updated to pass
+     both callbacks; the anonymous DualAlarmListener used for refresh
+     now also overrides onTriggerDismissed (required — the interface
+     gained a fourth method).
+   - res/layout/item_dual_trigger.xml: added triggerDismissButton next
+     to triggerSilentButton.
+   - ui/SymbolCardAdapter.java: the new triggerDismissButton is hidden
+     for Active Signals rows too (that layout is reused there, and a
+     plain signal row is not a trigger — neither button applies).
+   - res/values/strings.xml: trigger_dismiss_button = "Dismiss".
+
+5) Workflow fix
+   - .github/workflows/build-apk.yml: added
+     defaults.run.working-directory: MT5DualMultiTF/mt5dual at the job
+     level (same pattern as Dashboard's workflow); removed the now-
+     redundant per-step working-directory on "Build Debug APK". Only
+     affects `run:` steps — checkout/setup-java/setup-android/gradle-
+     build-action/upload-artifact are untouched by this and keep
+     resolving paths relative to the repo root as before.
+
+Explicitly NOT touched, per the mandatory decisions for this version:
+- core/ package (SignalParser, SignalValidator, SignalStateManager,
+  SymbolTFKey, DualReference, DualTrigger, WeekdayTimeUtil)
+- Dual Engine matching logic (Reference advance, window, price
+  difference)
+- DualApplication.java
+- AlarmNotifier.java, beyond the one new onTriggerDismissed line
+- Persistence (still RAM-only)
+- Stop Monitoring bug (out of scope for this version)
+- Weekend/WeekdayTimeUtil inconsistency (out of scope for this version)
+- triggerId-based Dismiss (explicitly rejected for this version)
