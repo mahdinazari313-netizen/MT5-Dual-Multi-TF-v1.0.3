@@ -92,28 +92,27 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_dual_window:
-                showDualWindowDialog();
-                return true;
-            case R.id.action_repeat_interval:
-                showRepeatIntervalDialog();
-                return true;
-            case R.id.action_price_difference:
-                showPriceDifferenceDialog();
-                return true;
-            case R.id.action_permissions:
-                showPermissionsDialog();
-                return true;
-            case R.id.action_toggle_monitoring:
-                toggleMonitoring();
-                return true;
-            case R.id.action_about:
-                showAboutDialog();
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_dual_window) {
+            showDualWindowDialog();
+            return true;
+        } else if (itemId == R.id.action_repeat_interval) {
+            showRepeatIntervalDialog();
+            return true;
+        } else if (itemId == R.id.action_price_difference) {
+            showPriceDifferenceDialog();
+            return true;
+        } else if (itemId == R.id.action_permissions) {
+            showPermissionsDialog();
+            return true;
+        } else if (itemId == R.id.action_toggle_monitoring) {
+            toggleMonitoring();
+            return true;
+        } else if (itemId == R.id.action_about) {
+            showAboutDialog();
+            return true;
         }
+        return super.onOptionsItemSelected(item);
     }
 
     private void showDualWindowDialog() {
@@ -316,14 +315,6 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    /**
-     * نشانگر بصری نسخه (مثل Dashboard v16.2): زیر عنوان Toolbar، همیشه
-     * قابل دیدن بدون باز کردن منو. چون Toolbar در ریشه activity_main.xml
-     * است (بیرون از fragmentContainer)، با عوض‌شدن تب‌ها دست‌نخورده
-     * می‌ماند. منبع نسخه: getPackageManager().getPackageInfo(...)
-     * .versionName - همان API که showAboutDialog از قبل استفاده می‌کند،
-     * نه BuildConfig.
-     */
     private void applyVersionSubtitle(Toolbar toolbar) {
         String versionName;
         try {
